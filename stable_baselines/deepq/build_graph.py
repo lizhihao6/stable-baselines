@@ -428,6 +428,9 @@ def build_train(q_func, ob_space, ac_space, optimizer, sess, grad_norm_clipping=
                     gradients[i] = (tf.clip_by_norm(grad, grad_norm_clipping), var)
 
     with tf.variable_scope("input_info", reuse=False):
+        # Edit: Add action
+        tf.summary.scalar('actions', tf.reduce_mean(act_t_ph))
+        tf.summary.histogram('actions', tf.reduce_mean(act_t_ph))
         tf.summary.scalar('rewards', tf.reduce_mean(rew_t_ph))
         tf.summary.histogram('rewards', rew_t_ph)
         tf.summary.scalar('importance_weights', tf.reduce_mean(importance_weights_ph))
