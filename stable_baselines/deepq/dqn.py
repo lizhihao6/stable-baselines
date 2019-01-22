@@ -322,6 +322,7 @@ class DQN(OffPolicyRLModel):
 
         restores = []
         for param, loaded_p in zip(model.params, params):
+            print(loaded_p)
             restores.append(param.assign(loaded_p))
         model.sess.run(restores)
 
