@@ -314,6 +314,8 @@ class DQN(OffPolicyRLModel):
     def load(cls, load_path, env=None, **kwargs):
         data, params = cls._load_from_file(load_path)
 
+        print(data)
+
         model = cls(policy=data["policy"], env=env, _init_setup_model=False)
         model.__dict__.update(data)
         model.__dict__.update(kwargs)
