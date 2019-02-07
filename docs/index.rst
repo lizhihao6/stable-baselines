@@ -38,6 +38,7 @@ This toolset is a fork of OpenAI Baselines, with a major structural refactoring,
 
    guide/install
    guide/quickstart
+   guide/rl
    guide/algos
    guide/examples
    guide/vec_envs
@@ -62,6 +63,7 @@ This toolset is a fork of OpenAI Baselines, with a major structural refactoring,
   modules/her
   modules/ppo1
   modules/ppo2
+  modules/sac
   modules/trpo
 
 .. toctree::
@@ -89,7 +91,7 @@ To cite this project in publications:
 .. code-block:: bibtex
 
     @misc{stable-baselines,
-      author = {Hill, Ashley and Raffin, Antonin and Traore, Rene and Dhariwal, Prafulla and Hesse, Christopher and Klimov, Oleg and Nichol, Alex and Plappert, Matthias and Radford, Alec and Schulman, John and Sidor, Szymon and Wu, Yuhuai},
+      author = {Hill, Ashley and Raffin, Antonin and Ernestus, Maximilian and Traore, Rene and Dhariwal, Prafulla and Hesse, Christopher and Klimov, Oleg and Nichol, Alex and Plappert, Matthias and Radford, Alec and Schulman, John and Sidor, Szymon and Wu, Yuhuai},
       title = {Stable Baselines},
       year = {2018},
       publisher = {GitHub},
@@ -101,11 +103,10 @@ Contributing
 ------------
 
 To any interested in making the rl baselines better, there is still some improvements
-that needs to be done: good-to-have features like support for continuous actions (ACER)
-and more documentation on the rl algorithms.
+that needs to be done.
+A full TODO list is available in the `roadmap <https://github.com/hill-a/stable-baselines/projects/1>`_.
 
-If you want to contribute, please open an issue first and then propose your pull request on Github at
-https://github.com/hill-a/stable-baselines.
+If you want to contribute, please read `CONTRIBUTING.md <https://github.com/hill-a/stable-baselines/blob/master/CONTRIBUTING.md>`_ first.
 
 Indices and tables
 -------------------

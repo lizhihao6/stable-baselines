@@ -5,7 +5,36 @@ Changelog
 
 For download links, please look at `Github release page <https://github.com/hill-a/stable-baselines/releases>`_.
 
-Pre-Release 2.2.2a (WIP)
+Pre-Release 2.4.1a (WIP)
+--------------------------
+
+- fixed computation of training metrics in TRPO and PPO1
+- fixed custom policy examples in the doc for DQN and DDPG
+- remove gym spaces patch for equality functions
+
+
+Release 2.4.0 (2019-01-17)
+--------------------------
+
+**Soft Actor-Critic (SAC) and policy kwargs**
+
+- added Soft Actor-Critic (SAC) model
+- fixed a bug in DQN where prioritized_replay_beta_iters param was not used
+- fixed DDPG that did not save target network parameters
+- fixed bug related to shape of true_reward (@abhiskk)
+- fixed example code in documentation of tf_util:Function (@JohannesAck)
+- added learning rate schedule for SAC
+- fixed action probability for continuous actions with actor-critic models
+- added optional parameter to action_probability for likelihood calculation of given action being taken.
+- added more flexible custom LSTM policies
+- added auto entropy coefficient optimization for SAC
+- clip continuous actions at test time too for all algorithms (except SAC/DDPG where it is not needed)
+- added a mean to pass kwargs to policy when creating a model (+ save those kwargs)
+- fixed DQN examples in DQN folder
+- added possibility to pass activation function for DDPG, DQN and SAC
+
+
+Release 2.3.0 (2018-12-05)
 --------------------------
 
 - added support for storing model in file like object. (thanks to @erniejunior)
@@ -13,6 +42,7 @@ Pre-Release 2.2.2a (WIP)
 - fixed bug in ppo2 when passing non callable lr after loading
 - fixed tensorboard logging in ppo2 when nminibatches=1
 - added early stoppping via callback return value (@erniejunior)
+- added more flexible custom mlp policies (@erniejunior)
 
 
 Release 2.2.1 (2018-11-18)
@@ -185,15 +215,16 @@ mujoco...)
 Maintainers
 -----------
 
-Stable-Baselines is currently maintained by `Ashley Hill`_ (aka @hill-a)
-and `Antonin Raffin`_ (aka `@araffin`_).
+Stable-Baselines is currently maintained by `Ashley Hill`_ (aka @hill-a) `Antonin Raffin`_ (aka `@araffin`_) and `Maximilian Ernestus`_ (aka @erniejunior).
 
 .. _Ashley Hill: https://github.com/hill-a
 .. _Antonin Raffin: https://araffin.github.io/
+.. _Maximilian Ernestus: https://github.com/erniejunior
 .. _@araffin: https://github.com/araffin
 
 Contributors (since v2.0.0):
 ----------------------------
 In random order...
 
-Thanks to @bjmuld @iambenzo @iandanforth @r7vme @brendenpetersen @huvar @erniejunior
+Thanks to @bjmuld @iambenzo @iandanforth @r7vme @brendenpetersen @huvar @abhiskk @JohannesAck
+@EliasHasle @mrakgr @Bleyddyn @antoine-galataud

@@ -3,6 +3,7 @@ import os
 import time
 from collections import deque
 import pickle
+import warnings
 
 import gym
 import numpy as np
@@ -138,7 +139,7 @@ class DDPG(OffPolicyRLModel):
 
     :param policy: (DDPGPolicy or str) The policy model to use (MlpPolicy, CnnPolicy, LnMlpPolicy, ...)
     :param env: (Gym environment or str) The environment to learn from (if registered in Gym, can be str)
-    :param gamma: (float) the discount rate
+    :param gamma: (float) the discount factor
     :param memory_policy: (Memory) the replay buffer (if None, default to baselines.ddpg.memory.Memory)
     :param eval_env: (Gym Environment) the evaluation environment (can be None)
     :param nb_train_steps: (int) the number of training steps
@@ -166,6 +167,7 @@ class DDPG(OffPolicyRLModel):
     :param verbose: (int) the verbosity level: 0 none, 1 training information, 2 tensorflow debug
     :param tensorboard_log: (str) the log location for tensorboard (if None, no logging)
     :param _init_setup_model: (bool) Whether or not to build the network at the creation of the instance
+    :param policy_kwargs: (dict) additional arguments to be passed to the policy on creation
     """
 
     def __init__(self, policy, env, gamma=0.99, memory_policy=None, eval_env=None, nb_train_steps=50,
@@ -174,11 +176,11 @@ class DDPG(OffPolicyRLModel):
                  normalize_returns=False, enable_popart=False, observation_range=(-5., 5.), critic_l2_reg=0.,
                  return_range=(-np.inf, np.inf), actor_lr=1e-4, critic_lr=1e-3, clip_norm=None, reward_scale=1.,
                  render=False, render_eval=False, memory_limit=100, verbose=0, tensorboard_log=None,
-                 _init_setup_model=True):
+                 _init_setup_model=True, policy_kwargs=None):
 
         # TODO: replay_buffer refactoring
         super(DDPG, self).__init__(policy=policy, env=env, replay_buffer=None, verbose=verbose, policy_base=DDPGPolicy,
-                                   requires_vec_env=False)
+                                   requires_vec_env=False, policy_kwargs=policy_kwargs)
 
         # Parameters.
         self.gamma = gamma
@@ -258,6 +260,7 @@ class DDPG(OffPolicyRLModel):
         self.summary = None
         self.episode_reward = None
         self.tb_seen_steps = None
+        self.target_params = None
 
         if _init_setup_model:
             self.setup_model()
@@ -292,28 +295,31 @@ class DDPG(OffPolicyRLModel):
                     else:
                         self.ret_rms = None
 
-                    self.policy_tf = self.policy(self.sess, self.observation_space, self.action_space, 1, 1, None)
+                    self.policy_tf = self.policy(self.sess, self.observation_space, self.action_space, 1, 1, None,
+                                                 **self.policy_kwargs)
 
                     # Create target networks.
-                    self.target_policy = self.policy(self.sess, self.observation_space, self.action_space, 1, 1, None)
+                    self.target_policy = self.policy(self.sess, self.observation_space, self.action_space, 1, 1, None,
+                                                     **self.policy_kwargs)
                     self.obs_target = self.target_policy.obs_ph
                     self.action_target = self.target_policy.action_ph
 
-                    normalized_obs0 = tf.clip_by_value(normalize(self.policy_tf.processed_x, self.obs_rms),
+                    normalized_obs0 = tf.clip_by_value(normalize(self.policy_tf.processed_obs, self.obs_rms),
                                                        self.observation_range[0], self.observation_range[1])
-                    normalized_obs1 = tf.clip_by_value(normalize(self.target_policy.processed_x, self.obs_rms),
+                    normalized_obs1 = tf.clip_by_value(normalize(self.target_policy.processed_obs, self.obs_rms),
                                                        self.observation_range[0], self.observation_range[1])
 
                     if self.param_noise is not None:
                         # Configure perturbed actor.
                         self.param_noise_actor = self.policy(self.sess, self.observation_space, self.action_space, 1, 1,
-                                                             None)
+                                                             None, **self.policy_kwargs)
                         self.obs_noise = self.param_noise_actor.obs_ph
                         self.action_noise_ph = self.param_noise_actor.action_ph
 
                         # Configure separate copy for stddev adoption.
                         self.adaptive_param_noise_actor = self.policy(self.sess, self.observation_space,
-                                                                      self.action_space, 1, 1, None)
+                                                                      self.action_space, 1, 1, None,
+                                                                      **self.policy_kwargs)
                         self.obs_adapt_noise = self.adaptive_param_noise_actor.obs_ph
                         self.action_adapt_noise = self.adaptive_param_noise_actor.action_ph
 
@@ -380,6 +386,7 @@ class DDPG(OffPolicyRLModel):
                     tf.summary.scalar('critic_loss', self.critic_loss)
 
                 self.params = find_trainable_variables("model")
+                self.target_params = find_trainable_variables("target")
 
                 with self.sess.as_default():
                     self._initialize(self.sess)
@@ -948,17 +955,15 @@ class DDPG(OffPolicyRLModel):
 
         return actions, None
 
-    def action_probability(self, observation, state=None, mask=None):
+    def action_probability(self, observation, state=None, mask=None, actions=None):
         observation = np.array(observation)
-        vectorized_env = self._is_vectorized_observation(observation, self.observation_space)
 
-        observation = observation.reshape((-1,) + self.observation_space.shape)
+        if actions is not None:
+            raise ValueError("Error: DDPG does not have action probabilities.")
 
-        # here there are no action probabilities, as DDPG is continuous
-        if vectorized_env:
-            return self.sess.run(self.policy_tf.policy_proba, feed_dict={self.obs_train: observation})
-        else:
-            return self.sess.run(self.policy_tf.policy_proba, feed_dict={self.obs_train: observation})[0]
+        # here there are no action probabilities, as DDPG does not use a probability distribution
+        warnings.warn("Warning: action probability is meaningless for DDPG. Returning None")
+        return None
 
     def save(self, save_path):
         data = {
@@ -988,16 +993,23 @@ class DDPG(OffPolicyRLModel):
             "policy": self.policy,
             "memory_policy": self.memory_policy,
             "n_envs": self.n_envs,
-            "_vectorize_action": self._vectorize_action
+            "_vectorize_action": self._vectorize_action,
+            "policy_kwargs": self.policy_kwargs
         }
 
         params = self.sess.run(self.params)
+        target_params = self.sess.run(self.target_params)
 
-        self._save_to_file(save_path, data=data, params=params)
+        self._save_to_file(save_path, data=data, params=params + target_params)
 
     @classmethod
     def load(cls, load_path, env=None, **kwargs):
         data, params = cls._load_from_file(load_path)
+
+        if 'policy_kwargs' in kwargs and kwargs['policy_kwargs'] != data['policy_kwargs']:
+            raise ValueError("The specified policy kwargs do not equal the stored policy kwargs. "
+                             "Stored kwargs: {}, specified kwargs: {}".format(data['policy_kwargs'],
+                                                                              kwargs['policy_kwargs']))
 
         model = cls(None, env, _init_setup_model=False)
         model.__dict__.update(data)
@@ -1006,7 +1018,7 @@ class DDPG(OffPolicyRLModel):
         model.setup_model()
 
         restores = []
-        for param, loaded_p in zip(model.params, params):
+        for param, loaded_p in zip(model.params + model.target_params, params):
             restores.append(param.assign(loaded_p))
         model.sess.run(restores)
 
