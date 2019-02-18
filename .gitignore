@@ -39,3 +39,6 @@ src
 .cache
 
 MUJOCO_LOG.TXT
+
+.vscode/
+.idea/
