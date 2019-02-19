@@ -468,7 +468,7 @@ class FeedForwardPolicy(ActorCriticPolicy):
         else:
             action = np.argmax(policy_prob[0, :] * mask.astype(np.uint8))
             action = np.array([action])  # add an axis
-            if np.random.uniform() < 0.1:
+            if np.random.uniform() < 0.01:
                 avail_index = np.array(np.where(mask.astype(np.uint8) > 0))[0]
                 action = np.random.choice(avail_index, 1)
             return action, value, self.initial_state, None
