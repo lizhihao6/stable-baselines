@@ -118,6 +118,7 @@ class BasePolicy(ABC):
             self.action_ph = None
             if add_action_ph:
                 self.action_ph = tf.placeholder(dtype=ac_space.dtype, shape=(None,) + ac_space.shape, name="action_ph")
+
         self.sess = sess
         self.reuse = reuse
         self.ob_space = ob_space
@@ -443,14 +444,33 @@ class FeedForwardPolicy(ActorCriticPolicy):
         self.initial_state = None
         self._setup_init()
 
+    # def step(self, obs, state=None, mask=None, deterministic=False):
+    #     if deterministic:
+    #         action, value, neglogp = self.sess.run([self.deterministic_action, self._value, self.neglogp],
+    #                                                {self.obs_ph: obs})
+    #     else:
+    #         action, value, neglogp = self.sess.run([self.action, self._value, self.neglogp],
+    #                                                {self.obs_ph: obs})
+    #     return action, value, self.initial_state, neglogp
+
     def step(self, obs, state=None, mask=None, deterministic=False):
         if deterministic:
-            action, value, neglogp = self.sess.run([self.deterministic_action, self._value, self.neglogp],
-                                                   {self.obs_ph: obs})
+            action, value, neglogp, policy_prob = self.sess.run(
+                [self.deterministic_action, self._value, self.neglogp, self.policy_proba],
+                {self.obs_ph: obs})
         else:
-            action, value, neglogp = self.sess.run([self.action, self._value, self.neglogp],
-                                                   {self.obs_ph: obs})
-        return action, value, self.initial_state, neglogp
+            action, value, neglogp, policy_prob = self.sess.run(
+                [self.action, self._value, self.neglogp, self.policy_proba],
+                {self.obs_ph: obs})
+
+        if mask is None:
+            return action, value, self.initial_state, neglogp
+        else:
+            policy_prob = policy_prob[0, :]
+            assert policy_prob.shape == mask.shape
+            action = np.argmax(policy_prob * mask.astype(np.uint8))
+            action = np.array([action])  # add an axis
+            return action, value, self.initial_state, None
 
     def proba_step(self, obs, state=None, mask=None):
         return self.sess.run(self.policy_proba, {self.obs_ph: obs})

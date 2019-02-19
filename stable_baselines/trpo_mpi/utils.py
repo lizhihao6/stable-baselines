@@ -52,10 +52,13 @@ def traj_segment_generator(policy, env, horizon, reward_giver=None, gail=False):
     prev_actions = actions.copy()
     states = policy.initial_state
     done = None
+    action_mask = np.array([False for _ in range(env.action_space.n)])
+    action_mask[0] = True
 
     while True:
         prevac = action
-        action, vpred, states, _ = policy.step(observation.reshape(-1, *observation.shape), states, done)
+        action, vpred, states, _ = policy.step(observation.reshape(-1, *observation.shape), state=states,
+                                               mask=action_mask)
         # Slight weirdness here because we need value function at time T
         # before returning segment [0, T-1] so we get the correct
         # terminal value
@@ -69,7 +72,7 @@ def traj_segment_generator(policy, env, horizon, reward_giver=None, gail=False):
             yield {"ob": observations, "rew": rews, "dones": dones, "true_rew": true_rews, "vpred": vpreds,
                    "ac": actions, "prevac": prev_actions, "nextvpred": vpred * (1 - new), "ep_rets": ep_rets,
                    "ep_lens": ep_lens, "ep_true_rets": ep_true_rets, "total_timestep": current_it_timesteps}
-            _, vpred, _, _ = policy.step(observation.reshape(-1, *observation.shape))
+            _, vpred, _, _ = policy.step(observation.reshape(-1, *observation.shape), mask=action_mask)
             # Be careful!!! if you change the downstream algorithm to aggregate
             # several of these batches, then be sure to do a deepcopy
             ep_rets = []
@@ -94,6 +97,10 @@ def traj_segment_generator(policy, env, horizon, reward_giver=None, gail=False):
         else:
             observation, rew, done, _info = env.step(clipped_action[0])
             true_rew = rew
+        if _info is not None and 'action_mask' in _info:
+            action_mask = _info['action_mask']
+        else:
+            action_mask = None
         rews[i] = rew
         true_rews[i] = true_rew
         dones[i] = done
@@ -110,6 +117,9 @@ def traj_segment_generator(policy, env, horizon, reward_giver=None, gail=False):
             current_it_len = 0
             if not isinstance(env, VecEnv):
                 observation = env.reset()
+            if action_mask is not None:
+                action_mask = np.array([False for _ in range(env.action_space.n)])
+                action_mask[0] = True
         step += 1
 
 
