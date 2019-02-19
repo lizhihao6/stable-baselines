@@ -229,7 +229,7 @@ class PPO1(ActorCriticRLModel):
                                                                           seg["dones"].reshape((self.n_envs, -1)),
                                                                           writer, timesteps_so_far)
 
-                    # predicted value function before udpate
+                    # predicted value function before update
                     vpredbefore = seg["vpred"]
 
                     # standardized advantage function estimate

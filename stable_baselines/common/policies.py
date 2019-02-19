@@ -466,10 +466,11 @@ class FeedForwardPolicy(ActorCriticPolicy):
         if mask is None:
             return action, value, self.initial_state, neglogp
         else:
-            policy_prob = policy_prob[0, :]
-            assert policy_prob.shape == mask.shape
-            action = np.argmax(policy_prob * mask.astype(np.uint8))
+            action = np.argmax(policy_prob[0, :] * mask.astype(np.uint8))
             action = np.array([action])  # add an axis
+            if np.random.uniform() < 0.1:
+                avail_index = np.array(np.where(mask.astype(np.uint8) > 0))[0]
+                action = np.random.choice(avail_index, 1)
             return action, value, self.initial_state, None
 
     def proba_step(self, obs, state=None, mask=None):
